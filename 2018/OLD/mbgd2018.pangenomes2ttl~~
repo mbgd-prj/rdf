@@ -1,0 +1,81 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM
+";
+
+my %OPT;
+getopts('', \%OPT);
+
+!@ARGV && -t and die $USAGE;
+
+print '@prefix orth: <http://purl.org/net/orth#> .', "\n";
+print '@prefix cluster: <http://mbgd.genome.ad.jp/rdf/resource/cluster/> .', "\n";
+# print '@prefix gene: <http://mbgd.genome.ad.jp/rdf/resource/gene/> .', "\n";
+print "\n";
+
+my %CHECKED_PARENT_CHILD = ();
+my @PARENT = ();
+my %CHILDREN = ();
+
+my @NAME = ();
+while (<>) {
+    chomp;
+
+    if ($. == 1) {
+	/^taxid\t/ or die;
+	@NAME = split("\t", $_);
+	next;
+    }
+
+    my @val = split(/\t/, $_);
+    my %val = ();
+    for (my $i=0; $i<@val; $i++) {
+	$val{$NAME[$i]} = $val[$i];
+    }
+
+    if (! $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{taxid}_$val{clustid}"}) {
+	push @PARENT, "cluster:2018-01_$val{taxid}_$val{clustid}";
+    }
+
+    if ($val{mtaxid} and $val{mclustid}) {
+	if (! $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{taxid}_$val{clustid}"}{"cluster:2018-01_$val{mtaxid}_$val{mclustid}"}) {
+	    $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{taxid}_$val{clustid}"}{"cluster:2018-01_$val{mtaxid}_$val{mclustid}"} = 1;
+	    if ($CHILDREN{"cluster:2018-01_$val{taxid}_$val{clustid}"}) {
+		push @{$CHILDREN{"cluster:2018-01_$val{taxid}_$val{clustid}"}}, "cluster:2018-01_$val{mtaxid}_$val{mclustid}";
+	    } else {
+		$CHILDREN{"cluster:2018-01_$val{taxid}_$val{clustid}"} = ["cluster:2018-01_$val{mtaxid}_$val{mclustid}"];
+	    }
+	}
+
+	if (! $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{mtaxid}_$val{mclustid}"}) {
+	    push @PARENT, "cluster:2018-01_$val{mtaxid}_$val{mclustid}";
+	}
+	if ($CHECKED_PARENT_CHILD{"cluster:2018-01_$val{mtaxid}_$val{mclustid}"}{"<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>"}) {
+	    $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{mtaxid}_$val{mclustid}"}{"<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>"} = 1;
+	    push @{$CHILDREN{"cluster:2018-01_$val{mtaxid}_$val{mclustid}"}}, "<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>";
+	}
+    } elsif (! $val{mtaxid} and ! $val{mclustid}) {
+	if (! $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{taxid}_$val{clustid}"}{"<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>"}) {
+	    $CHECKED_PARENT_CHILD{"cluster:2018-01_$val{taxid}_$val{clustid}"}{"<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>"} = 1;
+	    if ($CHILDREN{"cluster:2018-01_$val{taxid}_$val{clustid}"}) {
+		push @{$CHILDREN{"cluster:2018-01_$val{taxid}_$val{clustid}"}}, "<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>";
+	    } else {
+		$CHILDREN{"cluster:2018-01_$val{taxid}_$val{clustid}"} = ["<http://mbgd.genome.ad.jp/rdf/resource/gene/$val{sp}:$val{name}>"];
+	    }
+	}
+    } else {
+	die;
+    }
+}
+
+for my $parent (@PARENT) {
+    print $parent, "\n";
+    print "    orth:hasHomologous\n";
+    my @child = sort keys %{$CHECKED_PARENT_CHILD{$parent}};
+    print "        ", join(" ,\n        ", @child), " .\n";
+    print "\n";
+}

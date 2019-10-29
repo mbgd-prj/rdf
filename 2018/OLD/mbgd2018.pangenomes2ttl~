@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM
+";
+
+my %OPT;
+getopts('', \%OPT);
+
+!@ARGV && -t and die $USAGE;
+
+print '@prefix orthology: <http://purl.org/net/orth#> .', "\n";
+print '@prefix cluster: <http://mbgd.genome.ad.jp/rdf/resource/cluster/> .', "\n";
+print '@prefix gene: <http://mbgd.genome.ad.jp/rdf/resource/gene/> .', "\n";
+print "\n";
+
+my %CHECK_PARENT_CHILD = ();
+
+my @NAME = ();
+while (<>) {
+    chomp;
+
+    if ($. == 1) {
+	/^taxid\t/ or die;
+	@NAME = split("\t", $_);
+	next;
+    }
+
+    my @val = split(/\t/, $_);
+    my %val = ();
+    for (my $i=0; $i<@val; $i++) {
+	$val{$NAME[$i]} = $val[$i];
+    }
+
+    if ($val{mtaxid} and $val{mclustid}) {
+	if (! $CHECK_PARENT_CHILD{"$val{taxid}_$val{clustid}"}{"$val{mtaxid}_$val{mclustid}"}) {
+	    print "cluster:2017-01_$val{taxid}_$val{clustid} orthology:hasHomologous cluster:2017-01_$val{mtaxid}_$val{mclustid} .\n";
+	}
+	$CHECK_PARENT_CHILD{"$val{taxid}_$val{clustid}"}{"$val{mtaxid}_$val{mclustid}"} = 1;
+	print "cluster:2017-01_$val{mtaxid}_$val{mclustid} orthology:hasHomologous gene:$val{sp}:$val{name} .\n";
+    } elsif (! $val{mtaxid} and ! $val{mclustid}) {
+	print "cluster:2017-01_$val{taxid}_$val{clustid} orthology:hasHomologous gene:$val{sp}:$val{name} .\n";
+    }
+}
