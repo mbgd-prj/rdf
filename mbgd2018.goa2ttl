@@ -1,0 +1,85 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: cat FILE.goa | $PROGRAM
+
+$PROGRAM DIR_GOA
+";
+
+### Settings ###
+my %OPT;
+getopts('', \%OPT);
+
+my $MBGD = "http://mbgd.genome.ad.jp";
+my $MBGD_DUMP = "$MBGD/rdf/archive/uniprot-goa.ttl";
+my $MBGD_DATASET = "$MBGD/rdf/resource/uniprot-goa";
+
+### Main ###
+print '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .' . "\n";
+print '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .' . "\n";
+print '@prefix dct: <http://purl.org/dc/terms/> .' . "\n";
+print '@prefix void: <http://rdfs.org/ns/void#> .' . "\n";
+print '@prefix pav: <http://purl.org/pav/> .' . "\n";
+print '@prefix uniprot: <http://purl.uniprot.org/uniprot/> .' . "\n";
+print '@prefix goa: <http://purl.jp/bio/11/goa#> .' . "\n";
+# print '@prefix go: <http://purl.uniprot.org/go/> .' . "\n";
+print '@prefix obo: <http://purl.obolibrary.org/obo/> .' . "\n";
+print "\n";
+print "<$MBGD_DATASET>\n";
+print "    a void:Dataset ;\n";
+print "    dct:title \"UniProt-GOA\" ;\n";
+print "    dct:description \"RDF representation of UniProt-GOA.\" ;\n";
+print "    dct:creator <$MBGD> ;\n";
+print "    dct:publisher <http://www.nibb.ac.jp> ;\n";
+print "    dct:created \"", current_date_time(), "\"^^xsd:dateTime ;\n";
+# print "    void:dataDump <$MBGD_DUMP> ;\n";
+print "    dct:source <http://www.ebi.ac.uk/GOA> ;\n";
+
+print "    pav:derivedFrom <ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/UNIPROT/goa_uniprot_all.gaf.gz> ;\n";
+print "    rdfs:seeAlso <ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/UNIPROT/README> ;\n";
+while (<>) {
+    chomp;
+    if (/^!/) {
+	if (/^!(Generated:.*)/) {
+	    my $version = $1;
+	    print "    pav:version \"$version\" .\n";
+	    print "\n";
+	}
+	next;
+    }
+
+    my @x = split("\t", $_);
+    my ($db, $protein, $qualifier, $go_term, $evidence) = @x[0,1,3,4,6];
+    my $go_id;
+    if ($go_term =~ /^GO:(\d+)$/) {
+	$go_id = $1;
+    } else {
+	die;
+    }
+    if ($db ne "UniProtKB") {
+	print STDERR "$db is not UniProtKB";
+	next;
+    }
+    if ($qualifier =~ /NOT/) {
+	print STDERR "SKIP: $qualifier uniprot:$protein goa:$evidence GO:$go_id .\n";
+	next;
+    }
+    if ($qualifier ne "") {
+	print STDERR "WARNING: $qualifier uniprot:$protein goa:$evidence GO:$go_id .\n";
+    }
+    print "uniprot:$protein goa:goa$evidence obo:GO_$go_id .\n";
+}
+
+sub current_date_time {
+
+    my $date_time = `date +%FT%T%z`;
+    chomp($date_time);
+    unless ($date_time =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/) {
+	die;
+    }
+
+    return $date_time;
+}

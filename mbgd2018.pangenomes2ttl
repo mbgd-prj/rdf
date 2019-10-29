@@ -1,0 +1,95 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM
+";
+
+my %OPT;
+getopts('', \%OPT);
+
+!@ARGV && -t and die $USAGE;
+
+my $GENE = "http://mbgd.genome.ad.jp/rdf/resource/gene/";
+my $CLUSTER = "cluster:2018-01_";
+
+### Read ###
+my @HEADER = ();
+my @PARENT = ();
+my %CHILDREN = ();
+my %CHECKED_PARENT_CHILD = ();
+while (<>) {
+    chomp;
+
+    if ($. == 1) {
+	parse_header($_);
+    } else {
+	my %val = parse_line($_);
+	if (! $val{mtaxid} and ! $val{mclustid}) {
+	    save_children("${CLUSTER}$val{taxid}_$val{clustid}", "<${GENE}$val{sp}:$val{name}>");
+	} elsif ($val{mtaxid} and $val{mclustid}) {
+	    save_children("${CLUSTER}$val{taxid}_$val{clustid}", "${CLUSTER}$val{mtaxid}_$val{mclustid}");
+	    save_children("${CLUSTER}$val{mtaxid}_$val{mclustid}", "<${GENE}$val{sp}:$val{name}>");
+	} else {
+	    die;
+	}
+    }
+}
+
+### Print ###
+print '@prefix orth: <http://purl.org/net/orth#> .', "\n";
+print '@prefix cluster: <http://mbgd.genome.ad.jp/rdf/resource/cluster/> .', "\n";
+print "\n";
+for my $parent (@PARENT) {
+    print $parent, "\n";
+    print "    orth:hasHomologous\n";
+    my @child = sort keys %{$CHECKED_PARENT_CHILD{$parent}};
+    print "        ", join(" ,\n        ", @child), " .\n";
+    print "\n";
+}
+
+################################################################################
+### Functions ##################################################################
+################################################################################
+
+sub parse_header {
+    my ($header) = @_;
+    
+    if ($header =~ /^taxid\t/) {
+	@HEADER = split("\t", $header);
+    } else {
+	die;
+    }
+}
+
+sub parse_line {
+    my ($line) = @_;
+
+    my @val = split(/\t/, $line);
+    my %val = ();
+    for (my $i=0; $i<@val; $i++) {
+	$val{$HEADER[$i]} = $val[$i];
+    }
+
+    return %val;
+}
+
+sub save_children {
+    my ($parent, $child) = @_;
+
+    if (! $CHECKED_PARENT_CHILD{$parent}) {
+	push @PARENT, $parent;
+    }
+
+    if (! $CHECKED_PARENT_CHILD{$parent}{$child}) {
+	if ($CHILDREN{$parent}) {
+	    push @{$CHILDREN{$parent}}, $child;
+	} else {
+	    $CHILDREN{$parent} = [$child];
+	}
+    }
+
+    $CHECKED_PARENT_CHILD{$parent}{$child} = 1;
+}

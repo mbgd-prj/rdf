@@ -1,0 +1,79 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM
+";
+
+### Settings ###
+my %OPT;
+getopts('r:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+
+my $MBGD = "http://mbgd.genome.ad.jp";
+# my $MBGD_DATASET = "$MBGD/rdf/resource/${RELEASE_DATE_NUM}_xref_uniprot";
+my $MBGD_DATASET = "$MBGD/rdf/resource/xref_uniprot";
+my $MBGD_DUMP = "$MBGD/rdf/archive/mbgd_${RELEASE_DATE_NUM}/mbgd_${RELEASE_DATE_NUM}_xref_uniprot.ttl.gz";
+my $MBGD_GENE = "$MBGD/rdf/resource/gene";
+
+### Main ###
+!@ARGV && -t and die $USAGE;
+
+print '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .' . "\n";
+print '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .' . "\n";
+print '@prefix dct: <http://purl.org/dc/terms/> .' . "\n";
+print '@prefix void: <http://rdfs.org/ns/void#> .' . "\n";
+print '@prefix pav: <http://purl.org/pav/> .' . "\n";
+print '@prefix up: <http://purl.uniprot.org/core/> .' . "\n";
+print '@prefix uniprot: <http://purl.uniprot.org/uniprot/> .' . "\n";
+print '@prefix sio: <http://semanticscience.org/resource/> .' . "\n";
+print '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .' . "\n";
+print '@prefix orthology: <http://purl.org/net/orth#> .' . "\n";
+print '@prefix gene: <http://mbgd.genome.ad.jp/rdf/resource/gene/> .' . "\n";
+print "\n";
+
+print "<$MBGD_DATASET>\n";
+print "    a void:Dataset ;\n";
+print "    dct:title \"Cross-releases from MBGD to UniProt\" ;\n";
+print "    dct:description \"RDF representation of cross-references from MBGD to UniProt.\" ;\n";
+print "    dct:license <http://creativecommons.org/licenses/by-sa/3.0/> ;\n";
+print "    dct:publisher <http://www.nibb.ac.jp> ;\n";
+print "    dct:creator <$MBGD> ;\n";
+print "    dct:created \"", current_date_time(), "\"^^xsd:dateTime ;\n";
+print "    dct:source <$MBGD> ;\n";
+print "    pav:version \"$RELEASE_DATE_NUM\" ;\n";
+print "    void:dataDump <$MBGD_DUMP> .\n";
+print "\n";
+
+while (<>) {
+    chomp;
+    my ($sp, $name, $uniprot) = split(/\t/, $_);
+    if ($sp =~ /^sp$/) {
+	next;
+    }
+    print "gene:${sp}_$name\n";
+    print "    sio:SIO_010078 uniprot:$uniprot ;\n";
+    print "    mbgd:uniprot uniprot:$uniprot .\n";
+    print "\n";
+    print "uniprot:$uniprot\n";
+    print "    a orthology:Protein ;\n";
+    print "    a up:Protein .\n";
+    print "\n";
+}
+
+################################################################################
+### Function ###################################################################
+################################################################################
+sub current_date_time {
+
+    my $date_time = `date +%FT%T%z`;
+    chomp($date_time);
+    unless ($date_time =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/) {
+	die;
+    }
+
+    return $date_time;
+}

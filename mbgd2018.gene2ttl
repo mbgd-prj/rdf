@@ -1,0 +1,233 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM [-d DIR] [-g GENOME_TABLE]
+";
+
+### Settings ###
+my %OPT;
+getopts('r:d:g:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+
+my $DIR = $OPT{d} || die;
+if (-e $DIR) {
+    die "$DIR exists.\n";
+}
+
+my %SP_TO_TAXID = ();
+my %PROT_TO_TAXID = ();
+if ($OPT{g}) {
+    my $genome_table = $OPT{g};
+    open(GENOME, $genome_table) || die;
+    while (<GENOME>) {
+	chomp;
+	my @f = split("\t", $_);
+	my ($sp, $taxid) = @f[5,9];
+	$SP_TO_TAXID{$sp} = $taxid;
+    }
+    close(GENOME);
+}
+
+!@ARGV && -t and die $USAGE;
+
+my $MBGD = "http://mbgd.genome.ad.jp";
+# my $MBGD_DATASET = "$MBGD/rdf/resource/${RELEASE_DATE_NUM}_gene";
+my $MBGD_DATASET = "$MBGD/rdf/resource/gene";
+my $MBGD_DUMP = "$MBGD/rdf/archive/mbgd_${RELEASE_DATE_NUM}/mbgd_${RELEASE_DATE_NUM}_gene.ttl.gz";
+my $MBGD_GENE = "$MBGD/rdf/resource/gene";
+my $MBGD_ORGANISM = "$MBGD/rdf/resource/organism";
+my $MBGD_NUC_SEQ = "$MBGD/rdf/resource/nucseq";
+
+my @PREFIX = (
+    '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .',
+    '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .',
+    '@prefix dct: <http://purl.org/dc/terms/> .',
+    '@prefix void: <http://rdfs.org/ns/void#> .',
+    '@prefix pav: <http://purl.org/pav/> .',
+    '@prefix orth: <http://purl.org/net/orth#> .',
+    '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .',
+    '@prefix gtps: <http://gtps.ddbj.nig.ac.jp/core/qualifier/> .',
+    '@prefix obo: <http://purl.obolibrary.org/obo/> .' ,
+    '@prefix sio: <http://semanticscience.org/resource/> .' ,
+    '@prefix foaf: <http://xmlns.com/foaf/0.1/> .'
+    );
+my $PREFIX = join("\n", @PREFIX) . "\n\n";
+
+### Main ###
+my $GENE_COUNT;
+my $INDEX = 0;
+
+system "mkdir $DIR";
+open_new_output_file($DIR, \$INDEX, $PREFIX, \$GENE_COUNT);
+
+print OUT "<$MBGD_DATASET>\n";
+print OUT "    a void:Dataset ;\n";
+print OUT "    dct:title \"MBGD genes\" ;\n";
+print OUT "    dct:description \"RDF representation of genes in MBGD.\" ;\n";
+print OUT "    dct:license <https://creativecommons.org/licenses/by-sa/4.0/> ;\n";
+print OUT "    dct:publisher <http://www.nibb.ac.jp> ;\n";
+print OUT "    dct:creator <$MBGD> ;\n";
+print OUT "    dct:created \"", current_date_time(), "\"^^xsd:dateTime ;\n";
+print OUT "    dct:source <$MBGD> ;\n";
+print OUT "    pav:version \"$RELEASE_DATE_NUM\" ;\n";
+print OUT "    void:dataDump <$MBGD_DUMP> .\n";
+print OUT "\n";
+
+my %NCOL = ();
+my %PROTEIN = ();
+while (<>) {
+    chomp;
+    my @x = split("\t", $_);
+
+    ### analyze header line
+    if ($. == 1) {
+	for (my $i=0; $i<@x; $i++) {
+	    $NCOL{$x[$i]} = $i;
+	}
+	next;
+    }
+
+    ### get values
+    my ($sp, $name, $gene, $descr, $type, $protid, $from, $to, $dir, $aalen) = get_values
+	($_, "sp", "name", "gene", "descr", "type", "protid", "from1", "to1", "dir", "aalen");
+    my ($chrid, $protid_gbk, $source, $gtps, $grade) = get_values
+	($_, "chrid", "protid_gbk", "source", "gtps_name", "grade");
+
+    ### error handling
+    unless ($from && $to) {
+	print STDERR "WARNING: no location: $_\n";
+	next;
+    }
+    if ($name =~ />/) {
+	print STDERR "WARNING: invalid character '>' in gene name: $_\n";
+	# next;
+	$name =~ s/>//;
+    }
+
+    ### print
+    open_new_output_file($DIR, \$INDEX, $PREFIX, \$GENE_COUNT, 800000);
+    print OUT "<$MBGD_GENE/$sp:$name>\n";
+    print OUT "    a orth:Gene ;\n";
+    print OUT "    a mbgd:$type ;\n";
+    if ($gene eq "NULL") {
+	print OUT "    rdfs:label \"\" ;\n";
+    } else {
+	print OUT "    rdfs:label \"$gene\" ;\n";
+    }
+    print OUT "    dct:identifier \"$sp:$name\" ;\n";
+    print OUT "    dct:description \"$descr\" ;\n";
+    if ($source eq "refseq") {
+	print OUT "    dct:source <http://www.ncbi.nlm.nih.gov/refseq> ;\n";
+    } elsif ($source eq "gbk") {
+	print OUT "    dct:source <http://www.ncbi.nlm.nih.gov/genbank> ;\n";
+    } elsif ($source eq "gtps") {
+	print OUT "    dct:source <http://gtps.ddbj.nig.ac.jp> ;\n";
+    } else {
+	print STDERR "WARNING: no source: $_\n";
+    }
+    if ($OPT{g}) {
+	my $taxid = $SP_TO_TAXID{$sp};
+	if (defined $taxid) {
+	    print OUT "    obo:RO_0002162 <http://identifiers.org/taxonomy/$taxid> ;\n";
+	    print OUT "    mbgd:taxon <http://identifiers.org/taxonomy/$taxid> ;\n";
+	} else {
+	    print STDERR "WARNING: no taxid for $sp\n";
+	}
+    }
+    print OUT "    mbgd:organism <$MBGD_ORGANISM/$sp> ;\n";
+    if ($protid and $protid ne "NULL") {
+	print OUT "    sio:SIO_010078 <http://www.ncbi.nlm.nih.gov/protein/$protid> ;\n";
+	print OUT "    mbgd:protein <http://www.ncbi.nlm.nih.gov/protein/$protid> ;\n";
+	$PROTEIN{$protid} = 1;
+    } elsif ($protid_gbk and $protid_gbk ne "NULL") {
+	print OUT "    sio:SIO_010078 <http://www.ncbi.nlm.nih.gov/protein/$protid_gbk> ;\n";
+	print OUT "    rdfs:seeAlso <http://www.ncbi.nlm.nih.gov/protein/$protid_gbk> ;\n";
+	$PROTEIN{$protid_gbk} = 1;
+    }
+    if ($gtps and $gtps ne "NULL") {
+	print OUT "    mbgd:gtps <http://gtps.ddbj.nig.ac.jp/feature/$gtps> ;\n";
+    }
+    print OUT "    mbgd:nucSeq <$MBGD_NUC_SEQ/$chrid> ;\n";
+    print OUT "    mbgd:aaLength \"$aalen\"^^xsd:integer ;\n" if $aalen =~ /^\d+$/;
+    print OUT "    gtps:grade \"$grade\"^^xsd:string ;\n" if $grade ne "";
+    print OUT "    foaf:page <http://mbgd.genome.ad.jp/htbin/MBGD_gene_info_frame.pl?name=$sp:$name> .\n";
+    print OUT "\n";
+
+    $GENE_COUNT ++;
+}
+
+# print STDERR "Creating RDF for proteins..\n";
+my $PROTEIN_COUNT;
+open_new_output_file($DIR, \$INDEX, $PREFIX, \$PROTEIN_COUNT);
+for my $protein (keys %PROTEIN) {
+    open_new_output_file($DIR, \$INDEX, $PREFIX, \$PROTEIN_COUNT, 4000000);
+    print OUT "<http://www.ncbi.nlm.nih.gov/protein/$protein>\n";
+    print OUT "    a orth:Protein ;\n";
+    if ($protein =~ /^(\S+)\.\d+$/) {
+	print OUT "    dct:isVersionOf <http://www.ncbi.nlm.nih.gov/protein/$1> ;\n";
+    }
+    print OUT "    rdfs:seeAlso <http://identifiers.org/ncbiprotein/$protein> .\n";
+    print OUT "\n";
+    $PROTEIN_COUNT ++;
+}
+
+################################################################################
+### Function ###################################################################
+################################################################################
+
+sub current_date_time {
+
+    my $date_time = `date +%FT%T%z`;
+    chomp($date_time);
+    unless ($date_time =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/) {
+	die;
+    }
+
+    return $date_time;
+}
+
+sub get_values {
+    my ($string, @colname) = @_;
+
+    my @x = split("\t", $string);
+
+    my @y = ();
+    for my $colname (@colname) {
+	my $ncol = $NCOL{$colname};
+	my $y;
+	if (defined $ncol) {
+	    $y = $x[$ncol];
+	} else {
+	    $y = "";
+	}
+	push @y, $y;
+    }
+
+    return @y;
+}
+
+sub open_new_output_file {
+    my ($dir, $r_index, $prefix, $r_item_count, $max_count) = @_;
+
+    if (defined(${$r_item_count}) and ${$r_item_count} < $max_count) {
+	return;
+    }
+
+    if (${$r_index} != 0) {
+	close(OUT);
+    }
+
+    ${$r_index} ++;
+
+    my $index = ${$r_index};
+    open(OUT, ">$dir/$index.ttl") || die;
+    # print STDERR "creating $dir/$index.ttl\n";
+
+    print OUT $prefix;
+
+    ${$r_item_count} = 0;
+}
