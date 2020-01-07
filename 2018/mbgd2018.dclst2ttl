@@ -198,8 +198,8 @@ for my $homcluster (@HOMCLUSTER) {
 	    print "    mbgd:funcCog \"$CLUSTER{$cluster}{funcCog}\"^^xsd:string ;\n";
 	    print "    mbgd:funcKegg \"$CLUSTER{$cluster}{funcKegg}\"^^xsd:string ;\n";
 	    print "    mbgd:funcTigr \"$CLUSTER{$cluster}{funcTigr}\"^^xsd:string ;\n";
-	    print "    mbgd:score \"$CLUSTER{$cluster}{score}\"^^xsd:decimal ;\n";
-	    print "    mbgd:dist \"$CLUSTER{$cluster}{dist}\"^^xsd:decimal ;\n";
+	    print "    mbgd:score \"$CLUSTER{$cluster}{score}\"^^xsd:decimal ;\n" if defined $CLUSTER{$cluster}{score};
+	    print "    mbgd:dist \"$CLUSTER{$cluster}{dist}\"^^xsd:decimal ;\n" if defined $CLUSTER{$cluster}{dist};
 	    if ($TABLE_NAME eq "default") {
 		print "    foaf:page <http://mbgd.genome.ad.jp/htbin/hcluster?prog=hcluster&clustid=O${cluster}&tabid=default> ;\n";
 	    }
