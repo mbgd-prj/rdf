@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM
+";
+
+### Settings ###
+my %OPT;
+getopts('r:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+
+my $INPUT_DIR = "/db/project/MBGD/database/tax_pan_test";
+my @INPUT_FILE = `ls $INPUT_DIR/*/*/*.dclst`;
+chomp(@INPUT_FILE);
+
+my $OUT_DIR = "tax_pan";
+if (! -e $OUT_DIR) {
+    system "mkdir $OUT_DIR";
+}
+
+### Main ###
+for my $input_file (@INPUT_FILE) {
+    my @input_dir = split("/", $input_file);
+    my ($rank, $tax) = @input_dir[6,7];
+    # my $name = read_selspec("$INPUT_DIR/$rank/$rank.selspec.out", $tax);
+    print STDERR "$input_file\t$rank\t$tax\n";
+    if (! -e "$OUT_DIR/$rank") {
+	system "mkdir $OUT_DIR/$rank";
+    }
+    # my $title = "MBGD $rank specific ortholog groups for $name";
+    my $title = "MBGD $rank specific ortholog groups";
+    system "cat $input_file | mbgd2018.dclst2ttl -r $RELEASE_DATE_NUM -t $tax -R $rank -T '$title' > $OUT_DIR/$rank/${tax}.ttl";
+}
+
+################################################################################
+### Functions ##################################################################
+################################################################################
+sub read_selspec {
+    my ($file, $tax) = @_;
+
+    my $taxid;
+    if ($tax =~ /^tax(\d+)$/) {
+	$taxid = $1;
+    } else {
+	die;
+    }
+
+    my $name;
+    open(SELSPEC, "$file") || die;
+    while (<SELSPEC>) {
+	chomp;
+	if (/^NAME: (.*)$/) {
+	    $name = $1;
+	} elsif (/^TAXID: (\d+)$/) {
+	    if ($1 eq $taxid) {
+		return $name;
+	    }
+	}
+    }
+    close(SELSPEC);
+}
