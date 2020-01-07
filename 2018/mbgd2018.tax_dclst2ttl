@@ -1,0 +1,308 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM -t TABLE_NAME
+-D RELEASE_DATE_FILE
+-R RANK
+-T TITLE
+";
+
+### Settings ###
+my %OPT;
+getopts('r:t:D:R:T:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+my $TABLE_NAME = $OPT{t} || die $USAGE;
+
+my $MBGD = "http://mbgd.genome.ad.jp";
+my $MBGD_DUMP = "$MBGD/rdf/archive/mbgd_${RELEASE_DATE_NUM}/mbgd_${RELEASE_DATE_NUM}_${TABLE_NAME}.ttl.gz";
+if ($OPT{R}) {
+    $MBGD_DUMP = "$MBGD/rdf/archive/${RELEASE_DATE_NUM}/tax_og/$OPT{R}/${TABLE_NAME}.ttl";
+}
+my $MBGD_DATASET = "$MBGD/rdf/resource/${RELEASE_DATE_NUM}_${TABLE_NAME}";
+# if ($TABLE_NAME eq "default") {
+    $MBGD_DATASET = "$MBGD/rdf/resource/${TABLE_NAME}";
+# }
+my $MBGD_DOMAIN = "$MBGD/rdf/resource/domain/${RELEASE_DATE_NUM}_${TABLE_NAME}";
+
+### Main ###
+print '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .' . "\n";
+print '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .' . "\n";
+print '@prefix dct: <http://purl.org/dc/terms/> .' . "\n";
+print '@prefix void: <http://rdfs.org/ns/void#> .' . "\n";
+print '@prefix pav: <http://purl.org/pav/> .' . "\n";
+print '@prefix foaf: <http://xmlns.com/foaf/0.1/> .' . "\n";
+print '@prefix sio: <http://semanticscience.org/resource/> .' . "\n";
+print '@prefix faldo: <http://biohackathon.org/resource/faldo#> .' . "\n";
+if ($OPT{R}) {
+    print '@prefix taxont: <http://ddbj.nig.ac.jp/ontologies/taxonomy/>' . "\n";
+}
+if ($TABLE_NAME =~ /^tax(\d+)$/) {
+    print '@prefix obo: <http://purl.obolibrary.org/obo/> .' . "\n";
+    print '@prefix taxid: <http://identifiers.org/taxonomy/>' . "\n";
+}
+print '@prefix orth: <http://purl.org/net/orth#> .' . "\n";
+print '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .' . "\n";
+print '@prefix mbgdr: <http://mbgd.genome.ad.jp/rdf/resource/> .' . "\n";
+print '@prefix cluster: <http://mbgd.genome.ad.jp/rdf/resource/cluster/> .' . "\n";
+# print '@prefix gene: <http://mbgd.genome.ad.jp/rdf/resource/gene/> .' . "\n";
+print '@prefix org: <http://mbgd.genome.ad.jp/rdf/resource/organism/> .' . "\n";
+print "\n";
+
+print "mbgdr:${TABLE_NAME}\n";
+print "    a void:Dataset ;\n";
+print "    a orth:OrthologyDataset ;\n";
+print "    dct:title \"", $OPT{T} || "MBGD ortholog groups", "\" ;\n";
+print "    dct:description \"RDF representation of ortholog groups in MBGD.\" ;\n";
+print "    dct:license <https://creativecommons.org/licenses/by-sa/4.0/> ;\n";
+print "    dct:creator <$MBGD> ;\n";
+print "    dct:publisher <http://www.nibb.ac.jp> ;\n";
+print "    dct:issued \"", extract_release_date($OPT{D}), "\"^^xsd:date ;\n" if $OPT{D};
+print "    dct:created \"", current_date_time(), "\"^^xsd:dateTime ;\n";
+print "    dct:source <$MBGD> ;\n";
+# print "    orth:hasSource \"MBGD\" ;\n";
+print "    pav:version \"$RELEASE_DATE_NUM\" ;\n";
+if ($TABLE_NAME !~ /^tax\d+$/) {
+    print "    pav:derivedFrom <$MBGD/dist/mbgd_${RELEASE_DATE_NUM}/mbgd_${RELEASE_DATE_NUM}_${TABLE_NAME}.dclst.gz> ;\n";
+}
+print "    void:dataDump <$MBGD_DUMP> ;\n";
+print "    taxont:rank taxont:", ucfirst($OPT{R}), " ;\n" if $OPT{R};
+if ($TABLE_NAME =~ /^tax(\d+)$/) {
+    print "    obo:RO_0002162 taxid:$1 ;\n";
+}
+print "    foaf:page <http://mbgd.genome.ad.jp/htbin/cluster_map?tabid=${TABLE_NAME}&show_summary=1>";
+if ($TABLE_NAME eq "default") {
+    print " .\n";
+    print "\n";
+} else {
+    print " ;\n";
+}
+
+!@ARGV && -t and die $USAGE;
+my $READING_CLUSTER = 0;
+my $HOMCLUSTER = "";
+my $CLUSTER = "";
+my @MEMBER = ();
+my %MEMBER_GENES = ();
+my %DOMAIN = ();
+my @CLUSTER = ();
+my %CLUSTER = ();
+my @HOMCLUSTER = ();
+my %HOMCLUSTER = ();
+while (<>) {
+    if (/^#SPECIES=(.*)$/) {
+	my $species = $1;
+	if ($species =~ /\s/) {
+	    die;
+	}
+	if ($species !~ /\S/) {
+	    die;
+	}
+	my @species = split(",", $species);
+	my @organism = ();
+	for my $sp (@species) {
+	    push @organism, "org:$sp";
+	}
+	my $organism_count = scalar(@organism);
+	if ($TABLE_NAME ne "default") {
+	    print "    mbgd:organismCount $organism_count ;\n";
+	    print "    mbgd:organism ", join(" ,\n                  ", @organism), " .\n";
+	    print "\n";
+	}
+    } elsif (/^Cluster (\d+)$/) {
+	$CLUSTER = $1;
+	$READING_CLUSTER = 1;
+	@MEMBER = ();
+	%MEMBER_GENES = ();
+    } elsif (/^HomCluster (\d+)$/) {
+	$HOMCLUSTER = $1;
+	push @HOMCLUSTER, $HOMCLUSTER;
+    } elsif ($READING_CLUSTER) {
+	if (/^#CDescr\t(.*)/) {
+	    my $descr = $1;
+	    if ($descr =~ /\r/) {
+		print STDERR "WARNING: cluster $CLUSTER description: $descr\n";
+		$descr =~ s/\r/\\\\r/;
+	    }
+	    $CLUSTER{$CLUSTER}{descr} = $descr;
+	} elsif (/^#CGene\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{symbol} = $1;
+	} elsif (/^#CFuncMbgd\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{funcMbgd} = $1;
+	} elsif (/^#CFuncCog\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{funcCog} = $1;
+	} elsif (/^#CFuncKegg\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{funcKegg} = $1;
+	} elsif (/^#CFuncTigr\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{funcTigr} = $1;
+	} elsif (/^#CScore\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{score} = $1;
+	} elsif (/^#CDist\t(.*)/) {
+	    $CLUSTER{$CLUSTER}{dist} = $1;
+	} elsif (/^#/) {
+	} elsif (/^(\w+):(\S+)\t(\d+)\t(\d+)\t(\d+)$/) {
+	    my ($sp, $gene, $domain, $start_pos, $end_pos) = ($1, $2, $3, $4, $5);
+	    push @MEMBER, "<${MBGD_DOMAIN}/${sp}:${gene}/$domain>";
+	    $MEMBER_GENES{"${sp}:$gene"}++;
+	    if ($DOMAIN{"${sp}:$gene"}{$domain}) {
+		die;
+	    }
+	    $DOMAIN{"${sp}:$gene"}{$domain} = [$start_pos, $end_pos];
+	} elsif (/^\//) {
+	    if ($HOMCLUSTER{$HOMCLUSTER}) {
+		push @{$HOMCLUSTER{$HOMCLUSTER}}, $CLUSTER;
+	    } else {
+		$HOMCLUSTER{$HOMCLUSTER} = [$CLUSTER];
+	    }
+	    my @genes = sort keys %MEMBER_GENES;
+	    for (my $i=0; $i<@genes; $i++) {
+		$genes[$i] = get_gene_uri($genes[$i]);
+	    }
+	    $CLUSTER{$CLUSTER}{member} = join(" ,\n        ", @MEMBER);
+	    $CLUSTER{$CLUSTER}{genes} = join(" ,\n        ", @genes);
+	    $CLUSTER{$CLUSTER}{size} = @MEMBER;
+	    $READING_CLUSTER = 0;
+	} else {
+	    print STDERR "WARNING: skipped invalid line: $_";
+	}
+    }
+}
+
+for my $homcluster (@HOMCLUSTER) {
+    my @member = ();
+    for my $cluster (@{$HOMCLUSTER{$homcluster}}) {
+	push @member, "cluster:${RELEASE_DATE_NUM}_${TABLE_NAME}_$cluster";
+    }
+    my $member_count = scalar(@member);
+    # print "<$MBGD_CLUSTER/homcluster/$homcluster>\n";
+    # print "    a orth:HomologsCluster ;\n";
+    # print "    dct:identifier \"$homcluster\" ;\n";
+    # print "    void:inDataset <$MBGD_DATASET> ;\n";
+    # print "    mbgd:memberCount $member_count ;\n";
+    # print "    orth:hasHomologous\n";
+    # print "        ", join(" ,\n        ", @member), " .\n";
+    # print "\n";
+
+    for my $cluster (@{$HOMCLUSTER{$homcluster}}) {
+	if ($CLUSTER{$cluster}{member}) {
+	    print "cluster:${RELEASE_DATE_NUM}_${TABLE_NAME}_$cluster\n";
+	    print "    a orth:OrthologsCluster ;\n";
+	    print "    rdfs:label \"$CLUSTER{$cluster}{symbol}\" ; \n";
+	    print "    dct:identifier \"$cluster\" ;\n";
+	    print "    dct:description \"$CLUSTER{$cluster}{descr}\" ;\n";
+	    print "    void:inDataset mbgdr:${TABLE_NAME} ; \n";
+	    print "    mbgd:funcMbgd \"$CLUSTER{$cluster}{funcMbgd}\"^^xsd:string ;\n";
+	    print "    mbgd:funcCog \"$CLUSTER{$cluster}{funcCog}\"^^xsd:string ;\n";
+	    print "    mbgd:funcKegg \"$CLUSTER{$cluster}{funcKegg}\"^^xsd:string ;\n";
+	    print "    mbgd:funcTigr \"$CLUSTER{$cluster}{funcTigr}\"^^xsd:string ;\n";
+	    print "    mbgd:score \"$CLUSTER{$cluster}{score}\"^^xsd:decimal ;\n";
+	    print "    mbgd:dist \"$CLUSTER{$cluster}{dist}\"^^xsd:decimal ;\n";
+	    if ($TABLE_NAME eq "default") {
+		print "    foaf:page <http://mbgd.genome.ad.jp/htbin/hcluster?prog=hcluster&clustid=O${cluster}&tabid=default> ;\n";
+	    }
+	    # print "    mbgd:memberCount $CLUSTER{$cluster}{size} ;\n";
+	    print "    orth:hasHomologous\n";
+	    print "        $CLUSTER{$cluster}{member} ;\n";
+	    print "    orth:hasHomologous\n";
+	    print "        $CLUSTER{$cluster}{genes} .\n";
+	    print "\n";
+	} else {
+	    print STDERR "WARNING: no member in Cluster $cluster\n";
+	}
+    }
+}
+
+for my $gene (sort {$a cmp $b} keys %DOMAIN) {
+    my $sp = "";
+    if ($gene =~ /^(\S+?):/) {
+    # if ($gene =~ /^(\S+?)_/) {
+	$sp = $1;
+    } else {
+	die;
+    }
+    my @domain = sort {$a<=>$b} keys %{$DOMAIN{$gene}};
+    for my $domain (@domain) {
+	my $label = "$gene";
+	if ($domain > 0) {
+	    $label .= "($domain)";
+	}
+	my ($begin, $end) = @{$DOMAIN{$gene}{$domain}};
+	print "<${MBGD_DOMAIN}/$gene/$domain>\n";
+	print "    a orth:Subgene ;\n";
+	print "    a mbgd:Domain ;\n";
+	print "    a faldo:Region ;\n";
+	print "    mbgd:organism org:$sp ;\n";
+	print "    mbgd:gene ",get_gene_uri($gene)," ;\n";
+	print "    sio:SIO_000068 ",get_gene_uri($gene)," ;\n";
+	print "    rdfs:label \"$label\" ;\n";
+	print "    dct:identifier \"$domain\" ;\n";
+	print "    mbgd:domainBegin \"$begin\"^^xsd:integer ;\n";
+	print "    mbgd:domainEnd \"$end\"^^xsd:integer ;\n";
+	print "    faldo:begin <${MBGD_DOMAIN}/$gene/$domain/begin> ;\n";
+	print "    faldo:end <${MBGD_DOMAIN}/$gene/$domain/end> .\n";
+	print "\n";
+	print "<${MBGD_DOMAIN}/$gene/$domain/begin>\n";
+	print "    a faldo:ExactPosition ;\n";
+	print "    faldo:position \"$begin\"^^xsd:integer ;\n";
+	print "    faldo:reference ",get_gene_uri($gene)," .\n";
+	print "\n";
+	print "<${MBGD_DOMAIN}/$gene/$domain/end>\n";
+	print "    a faldo:ExactPosition ;\n";
+	print "    faldo:position \"$end\"^^xsd:integer ;\n";
+	print "    faldo:reference ",get_gene_uri($gene)," .\n";
+	print "\n";
+    }
+    my @domain_uri = ();
+    for my $domain (@domain) {
+	push @domain_uri, "<${MBGD_DOMAIN}/$gene/$domain>";
+    }
+    print get_gene_uri($gene),"\n";
+    print "    mbgd:domain ", join(" ,\n                ", @domain_uri), " ;\n";
+    print "    sio:SIO_000028 ", join(" ,\n                   ", @domain_uri), " .\n";
+    print "\n";
+}
+
+
+################################################################################
+### Function ###################################################################
+################################################################################
+sub current_date_time {
+
+    my $date_time = `date +%FT%T%z`;
+    chomp($date_time);
+    unless ($date_time =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/) {
+	die;
+    }
+
+    return $date_time;
+}
+
+sub extract_release_date {
+    my ($file) = @_;
+
+    if (-f $file) {
+	my $date = `cat $file`;
+	if ($date =~ /(\d\d\d\d)\/(\d\d)\/(\d\d)/) {
+	    return "$1-$2-$3";
+	} else {
+	    die;
+	}
+    } else {
+	die;
+    }
+}
+
+sub get_gene_uri {
+    my ($gene) = @_;
+
+    if ($gene =~ /^(tax\d+):(\d+)$/) {
+	my ($taxid, $clustid) = ($1, $2);
+	return "cluster:${RELEASE_DATE_NUM}_${taxid}_$clustid";
+    } else {
+	# return "gene:$gene";
+	return "<http://mbgd.genome.ad.jp/rdf/resource/gene/$gene>";
+    }
+}
