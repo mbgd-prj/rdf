@@ -29,7 +29,7 @@ for my $input_file (@INPUT_FILE) {
     # my $name = read_selspec("$INPUT_DIR/$rank/$rank.selspec.out", $tax);
     print STDERR "$input_file\t$rank\t$tax\n";
     if (! -e "$OUT_DIR/$rank") {
-	system "mkdir $OUT_DIR/$rank";
+        system "mkdir $OUT_DIR/$rank";
     }
     # my $title = "MBGD $rank specific ortholog groups for $name";
     my $title = "MBGD $rank specific ortholog groups";
@@ -44,22 +44,22 @@ sub read_selspec {
 
     my $taxid;
     if ($tax =~ /^tax(\d+)$/) {
-	$taxid = $1;
+        $taxid = $1;
     } else {
-	die;
+        die;
     }
 
     my $name;
     open(SELSPEC, "$file") || die;
     while (<SELSPEC>) {
-	chomp;
-	if (/^NAME: (.*)$/) {
-	    $name = $1;
-	} elsif (/^TAXID: (\d+)$/) {
-	    if ($1 eq $taxid) {
-		return $name;
-	    }
-	}
+        chomp;
+        if (/^NAME: (.*)$/) {
+            $name = $1;
+        } elsif (/^TAXID: (\d+)$/) {
+            if ($1 eq $taxid) {
+                return $name;
+            }
+        }
     }
     close(SELSPEC);
 }
