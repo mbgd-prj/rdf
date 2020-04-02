@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM
+ex) -r 2018-01
+";
+
+my %OPT;
+getopts('r:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+
+!@ARGV && -t and die $USAGE;
+
+my $GENE = "http://mbgd.genome.ad.jp/rdf/resource/gene/";
+my $CLUSTER = "cluster:2018-01_";
+
+print '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .', "\n";
+print '@prefix cluster: <http://mbgd.genome.ad.jp/rdf/resource/cluster/> .', "\n";
+print "\n";
+### Read ###
+while (<>) {
+    chomp;
+    if ($. == 1) {
+        next;
+    }
+    my ($cluster, $rep_gene) = split(/\t/, $_);
+    print get_gene_uri($cluster), " mbgd:repGene ", get_gene_uri($rep_gene), " .\n";
+    
+}
+
+################################################################################
+### Functions ##################################################################
+################################################################################
+
+sub get_gene_uri {
+    my ($gene) = @_;
+
+    if ($gene =~ /^(tax\d+):(\d+)$/) {
+	my ($taxid, $clustid) = ($1, $2);
+	return "cluster:${RELEASE_DATE_NUM}_${taxid}_$clustid";
+    } else {
+        return "<http://mbgd.genome.ad.jp/rdf/resource/gene/$gene>";
+    }
+}
