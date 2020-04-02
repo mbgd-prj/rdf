@@ -331,3 +331,17 @@
     rdfs:domain :orth:OrthologGroup ;
     rdfs:range xsd:string ;
     rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
+
+:taxonShown
+    a owl:DatatypeProperty ;
+    rdfs:label "taxonShown" ;
+    rdfs:domain orth:Organism ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
+
+:parentTaxonShown
+    a owl:DatatypeProperty ;
+    rdfs:label "parentTaxonShown" ;
+    rdfs:domain orth:Organism ;
+    rdfs:range xsd:string ;
+    rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
