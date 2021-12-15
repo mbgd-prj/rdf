@@ -1,0 +1,12 @@
+title: MBGD RDF
+website: https://example.com/
+description: RDF version of MBGD database
+tags: []
+provider:
+creators:
+  - name: Hirokazu Chiba
+    affiliation: DBCLS
+version: 2020-01
+issued: 2021-12-15
+licenses:
+  - Attribution 4.0 International (CC BY 4.0) 
