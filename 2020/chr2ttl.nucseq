@@ -1,0 +1,162 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM
+";
+
+### Settings ###
+my %OPT;
+getopts('r:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+
+my $MBGD = "http://mbgd.genome.ad.jp";
+# my $MBGD_DATASET = "$MBGD/rdf/resource/${RELEASE_DATE_NUM}_nucseq";
+my $MBGD_DATASET = "$MBGD/rdf/resource/nucseq";
+my $MBGD_DUMP = "$MBGD/rdf/archive/mbgd_${RELEASE_DATE_NUM}/mbgd_${RELEASE_DATE_NUM}_nucseq.ttl.gz";
+my $MBGD_NUC_SEQ = "$MBGD/rdf/resource/nucseq";
+my $MBGD_ORGANISM = "$MBGD/rdf/resource/organism";
+
+### Main ###
+!@ARGV && -t and die $USAGE;
+
+print '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .' . "\n";
+print '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .' . "\n";
+print '@prefix dct: <http://purl.org/dc/terms/> .' . "\n";
+print '@prefix void: <http://rdfs.org/ns/void#> .' . "\n";
+print '@prefix pav: <http://purl.org/pav/> .' . "\n";
+print '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .' . "\n";
+print '@prefix nuccore: <http://www.ncbi.nlm.nih.gov/nuccore/> .' . "\n";
+print "\n";
+
+print "<$MBGD_DATASET>\n";
+print "    a void:Dataset ;\n";
+print "    dct:title \"MBGD chromosomes\" ;\n";
+print "    dct:description \"RDF representation of chromosomes and plasmids in MBGD.\" ;\n";
+print "    dct:license <http://creativecommons.org/licenses/by-sa/3.0/> ;\n";
+print "    dct:publisher <http://www.nibb.ac.jp> ;\n";
+print "    dct:creator <$MBGD> ;\n";
+print "    dct:created \"", current_date_time(), "\"^^xsd:dateTime ;\n";
+print "    dct:source <$MBGD> ;\n";
+print "    pav:version \"$RELEASE_DATE_NUM\" ;\n";
+print "    void:dataDump <$MBGD_DUMP> .\n";
+print "\n";
+
+my %SUM_GENES = ();
+my %SUM_LENGTH = ();
+while (<>) {
+    chomp;
+    my @f = split(/\t/, $_);
+    my ($id, $sp, $name, $seqno, $type, $shape, $accession, $seq_length, $count_genes, $source) = @f[0,4,5,6,7,8,10,15,16,17];
+    if ($sp =~ /^sp$/) {
+	next;
+    }
+    $type = ucfirst($type);
+    if ($type eq "Mitochondrio") {
+	$type = "Mitochondrion";
+    }
+
+    my $source_uri;
+    if ($source eq "refseq") {
+	$source_uri = "<http://www.ncbi.nlm.nih.gov/refseq>";
+    } elsif ($source eq "gbk") {
+	$source_uri = "<http://www.ncbi.nlm.nih.gov/genbank>";
+    } elsif ($source eq "gtps") {
+	$source_uri = "<http://gtps.ddbj.nig.ac.jp>";
+    } else {
+	die $source;
+    }
+
+    if ($shape eq "linear") {
+	$shape = "mbgd:Linear";
+    } elsif ($shape eq "circular") {
+	$shape = "mbgd:Circular";
+    } else {
+	die;
+    }
+
+    accum_genes_and_length($sp, $count_genes, $seq_length);
+    print "<$MBGD_NUC_SEQ/$id>\n";
+    print "    a mbgd:$type ;\n";
+    print "    a $shape ;\n";
+    print "    rdfs:label \"$type $name\" ;\n";
+    print "    dct:identifier \"$seqno\"^^xsd:integer ;\n"                if $seqno =~ /^\d+$/;
+    print "    mbgd:organism <$MBGD_ORGANISM/$sp> ;\n";
+    # print "    mbgd:shape $shape ;\n";
+    print "    mbgd:nucLength \"$seq_length\"^^xsd:integer ;\n" if $seq_length =~ /^\d+$/;
+    print "    mbgd:geneCount \"$count_genes\"^^xsd:integer ;\n"       if $count_genes =~ /^\d+$/;
+    print "    dct:source $source_uri ;\n";
+    print "    rdfs:seeAlso nuccore:$accession .\n";
+    print "\n";
+
+    print "<$MBGD_ORGANISM/$sp>\n";
+    print "    mbgd:nucSeq <$MBGD_NUC_SEQ/$id> .\n";
+    print "\n";
+
+    my @out = ();
+    if ($accession =~ /^(\S+)\.\d+$/) {
+	push @out, "    dct:isVersionOf nuccore:$1" 
+    }
+    # if ($source eq "refseq") {
+    if ($accession =~ /_/) {
+	push @out, "    rdfs:seeAlso <http://identifiers.org/refseq/$accession>";
+    # } elsif ($source eq "gbk") {
+    } else {
+	push @out, "    rdfs:seeAlso <http://identifiers.org/insdc/$accession>";
+    }
+    print "nuccore:$accession\n";
+    print join(" ;\n", @out), " .\n";
+    print "\n";
+}
+
+for my $sp (sort keys %SUM_GENES) {
+    print "<$MBGD_ORGANISM/$sp> mbgd:sumGeneCount \"$SUM_GENES{$sp}\"^^xsd:integer .\n";
+}
+for my $sp (sort keys %SUM_LENGTH) {
+    print "<$MBGD_ORGANISM/$sp> mbgd:sumNucLength \"$SUM_LENGTH{$sp}\"^^xsd:integer .\n";
+}
+
+################################################################################
+### Function ###################################################################
+################################################################################
+sub accum_genes_and_length {
+    my ($sp, $count_genes, $seq_length) = @_;
+
+    if ($count_genes =~ /^\d+$/) {
+        if ($SUM_GENES{$sp}) {
+            $SUM_GENES{$sp} += $count_genes;
+        } else {
+            if ($count_genes) {
+                $SUM_GENES{$sp} = $count_genes;
+            } else {
+                die;
+            }
+        }
+    }
+
+    if ($seq_length =~ /^\d+$/) {
+        if ($SUM_LENGTH{$sp}) {
+            $SUM_LENGTH{$sp} += $seq_length;
+        } else {
+            if ($seq_length) {
+                $SUM_LENGTH{$sp} = $seq_length;
+            } else {
+                die;
+            }
+        }
+    }
+}
+
+sub current_date_time {
+
+    my $date_time = `date +%FT%T%z`;
+    chomp($date_time);
+    unless ($date_time =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/) {
+	die;
+    }
+
+    return $date_time;
+}

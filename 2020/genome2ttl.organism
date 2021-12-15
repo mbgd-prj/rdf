@@ -1,0 +1,150 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM -r RELEASE_DATE_NUM [-a ASSEMBLIES]
+";
+# -A ADDITIONAL_ASSEMBLIES
+
+### Settings ###
+my %OPT;
+getopts('r:a:A:', \%OPT);
+
+my $RELEASE_DATE_NUM = $OPT{r} || die $USAGE;
+
+my $MBGD = "http://mbgd.genome.ad.jp";
+# my $MBGD_DATASET = "$MBGD/rdf/resource/${RELEASE_DATE_NUM}_organism";
+my $MBGD_DATASET = "$MBGD/rdf/resource/organism";
+my $MBGD_DUMP = "$MBGD/rdf/archive/mbgd_${RELEASE_DATE_NUM}/mbgd_${RELEASE_DATE_NUM}_organism.ttl.gz";
+my $MBGD_ORGANISM = "$MBGD/rdf/resource/organism";
+
+my %ASSEMBLY = ();
+if ($OPT{a}) {
+    read_assemblies($OPT{a}, \%ASSEMBLY);
+}
+if ($OPT{A}) {
+    read_assemblies($OPT{A}, \%ASSEMBLY);
+}
+
+### Main ###
+!@ARGV && -t and die $USAGE;
+
+print '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .' . "\n";
+print '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .' . "\n";
+print '@prefix dct: <http://purl.org/dc/terms/> .' . "\n";
+print '@prefix void: <http://rdfs.org/ns/void#> .' . "\n";
+print '@prefix pav: <http://purl.org/pav/> .' . "\n";
+# print '@prefix orth: <http://purl.jp/bio/11/orth#> .' . "\n";
+print '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .' . "\n";
+print '@prefix obo: <http://purl.obolibrary.org/obo/> .' . "\n";
+print '@prefix up: <http://purl.uniprot.org/core/> .' . "\n";
+print '@prefix foaf: <http://xmlns.com/foaf/0.1/> .' . "\n";
+# print '@prefix assembly: <http://www.ncbi.nlm.nih.gov/assembly/> .' . "\n";
+print "\n";
+
+print "<$MBGD_DATASET>\n";
+print "    a void:Dataset ;\n";
+print "    dct:title \"MBGD organisms\" ;\n";
+print "    dct:description \"RDF representation of organisms in MBGD.\" ;\n";
+print "    dct:license <http://creativecommons.org/licenses/by-sa/4.0/> ;\n";
+print "    dct:creator <$MBGD> ;\n";
+print "    dct:publisher <http://www.nibb.ac.jp> ;\n";
+print "    dct:created \"", current_date_time(), "\"^^xsd:dateTime ;\n";
+print "    dct:source <$MBGD> ;\n";
+print "    pav:version \"$RELEASE_DATE_NUM\" ;\n";
+print "    void:dataDump <$MBGD_DUMP> .\n";
+print "\n";
+
+my @NAME = ();
+while (<>) {
+    chomp;
+    if ($. == 1) {
+	/^id\t/ or die;
+	@NAME = split("\t", $_);
+	next;
+    }
+    my @val = split(/\t/, $_);
+    my %val = ();
+    for (my $i=0; $i<@val; $i++) {
+	$val{$NAME[$i]} = $val[$i];
+    }
+
+    my $spid = $val{spid};
+    my $type;
+    if ($spid =~ /^gm\d{5}$/) {
+	$type = "CompleteGenome";
+    } elsif  ($spid =~ /^gd\d{5}$/) {
+	$type = "DraftGenome";
+    } else {
+	die;
+    }
+    my $description = $val{orgname};
+    $description .= " " . $val{strain} if $val{strain};
+    print "<$MBGD_ORGANISM/$val{sp}>\n";
+    print "    a mbgd:Genome ;\n";
+    print "    a mbgd:$type ;\n";
+    print "    rdfs:label \"$description\" ;\n";
+    print "    dct:identifier \"$val{sp}\" ;\n";
+    print "    dct:issued \"$val{date_release}\"^^xsd:date ;\n";
+    print "    dct:references <http://www.ncbi.nlm.nih.gov/pubmed/$val{medid}> ;\n" if $val{medid} ;
+    print "    mbgd:abbrev \"$val{abbrev}\" ;\n";
+    print "    mbgd:family \"$val{tax_family}\" ;\n";
+    print "    mbgd:genus \"$val{tax_genus}\" ;\n";
+    print "    mbgd:species \"$val{tax_species}\" ;\n";
+    print "    mbgd:strain \"$val{strain}\" ;\n" if defined $val{strain} and $val{strain} ne "";
+    print "    mbgd:spid \"$val{spid}\" ;\n";
+    # print "    mbgd:assembly \"$ASSEMBLY{$spid}{assembly_id}\" ;\n" if defined $ASSEMBLY{$spid}{assembly_id};
+    # print "    mbgd:assembly assembly:$ASSEMBLY{$spid}{assembly_id} ;\n" if defined $ASSEMBLY{$spid}{assembly_id};
+    print "    mbgd:assembly <http://www.ncbi.nlm.nih.gov/assembly/$ASSEMBLY{$spid}{assembly_id}> ;\n" if defined $ASSEMBLY{$spid}{assembly_id};
+    print "    mbgd:assemblyLevel \"$ASSEMBLY{$spid}{assembly_level}\" ;\n" if defined $ASSEMBLY{$spid}{assembly_level};
+    print "    mbgd:assemblyTotalLength $ASSEMBLY{$spid}{total_length} ;\n" if defined $ASSEMBLY{$spid}{total_length} and $ASSEMBLY{$spid}{total_length} ne "NULL";
+    print "    mbgd:assemblyTotalGapLength $ASSEMBLY{$spid}{total_gap_length} ;\n" if defined $ASSEMBLY{$spid}{total_gap_length} and $ASSEMBLY{$spid}{total_gap_length} ne "NULL";
+    print "    mbgd:assemblyContigCount $ASSEMBLY{$spid}{contig_count} ;\n" if defined $ASSEMBLY{$spid}{contig_count} and $ASSEMBLY{$spid}{contig_count} ne "NULL";
+    print "    mbgd:assemblyContigN50 $ASSEMBLY{$spid}{contig_n50} ;\n" if defined $ASSEMBLY{$spid}{contig_n50} and $ASSEMBLY{$spid}{contig_n50} ne "NULL";
+    print "    mbgd:assemblyMoleculeCount $ASSEMBLY{$spid}{molecule_count} ;\n" if defined $ASSEMBLY{$spid}{molecule_count} and $ASSEMBLY{$spid}{molecule_count} ne "NULL";
+    print "    mbgd:assemblyTopLevelCount $ASSEMBLY{$spid}{top_level_count} ;\n" if defined $ASSEMBLY{$spid}{top_level_count} and $ASSEMBLY{$spid}{top_level_count} ne "NULL";
+    print "    mbgd:unlocalizedTotalLength $ASSEMBLY{$spid}{unlocalized_total_length} ;\n" if defined $ASSEMBLY{$spid}{unlocalized_total_length} and $ASSEMBLY{$spid}{unlocalized_total_length} ne "NULL";
+    print "    mbgd:unlocalizedUngappedLength $ASSEMBLY{$spid}{unlocalized_ungapped_length} ;\n" if defined $ASSEMBLY{$spid}{unlocalized_ungapped_length} and $ASSEMBLY{$spid}{unlocalized_ungapped_length} ne "NULL";
+    print "    mbgd:taxon <http://identifiers.org/taxonomy/$val{taxid}> ;\n";
+    print "    obo:RO_0002162 <http://identifiers.org/taxonomy/$val{taxid}> ;\n";
+    print "    up:organism <http://purl.uniprot.org/taxonomy/$val{taxid}> ;\n";
+    print "    foaf:page <http://mbgd.genome.ad.jp/htbin/MBGD_whole_html.pl?spec=$val{sp}> .\n";
+    print "\n";
+}
+
+################################################################################
+### Function ###################################################################
+################################################################################
+sub current_date_time {
+
+    my $date_time = `date +%FT%T%z`;
+    chomp($date_time);
+    unless ($date_time =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/) {
+	die;
+    }
+
+    return $date_time;
+}
+
+sub read_assemblies {
+    my ($file, $r_assembly) = @_;
+
+    my @name = ();
+    open(ASSEMBLIES, "$file") || die;
+    while (<ASSEMBLIES>) {
+	chomp;
+	if ($. == 1) {
+	    /^spid\t/ or die;
+	    @name = split("\t", $_);
+	    next;
+	}
+	my @val = split("\t", $_);
+	for (my $i=1; $i<@val; $i++) {
+	    defined ${$r_assembly}{$val[0]}{$name[$i]} and die;
+	    ${$r_assembly}{$val[0]}{$name[$i]} = $val[$i];
+	}
+    }
+    close(ASSEMBLIES);
+}

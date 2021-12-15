@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Basename;
+use Getopt::Std;
+my $PROGRAM = basename $0;
+my $USAGE=
+"Usage: $PROGRAM
+";
+
+my %OPT;
+getopts('', \%OPT);
+
+!@ARGV && -t and die $USAGE;
+
+print '@prefix org: <http://mbgd.genome.ad.jp/rdf/resource/organism/> .', "\n";
+print '@prefix taxid: <http://identifiers.org/taxonomy/> .', "\n";
+print '@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .', "\n";
+print "\n";
+
+my @NAME = ();
+while (<>) {
+    chomp;
+    if ($. == 1) {
+	if ($_ =~ /^\d/) {
+	    die;
+	} else {
+	    @NAME = split("\t", $_);
+	    next;
+	}
+    }
+
+    my @val = split(/\t/, $_);
+    my %val = ();
+    for (my $i=0; $i<@val; $i++) {
+	$val{$NAME[$i]} = $val[$i];
+    }
+
+    print "org:$val{sp}\n";
+    print "    mbgd:inSpecies taxid:$val{taxid_species} ;\n" if $val{taxid_species} ne "NULL";
+    print "    mbgd:inGenus taxid:$val{taxid_genus} ;\n" if $val{taxid_genus} ne "NULL";
+    print "    mbgd:inFamily taxid:$val{taxid_family} ;\n" if $val{taxid_family} ne "NULL";
+    print "    mbgd:inOrder taxid:$val{taxid_order} ;\n" if $val{taxid_order} ne "NULL";
+    print "    mbgd:inClass taxid:$val{taxid_class} ;\n" if $val{taxid_class} ne "NULL";
+    print "    mbgd:inPhylum taxid:$val{taxid_phylum} ;\n" if $val{taxid_phylum} ne "NULL";
+    print "    mbgd:inSuperkingdom taxid:$val{taxid_superkingdom} .\n";
+    print "\n";
+}
