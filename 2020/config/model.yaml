@@ -177,4 +177,4 @@
   - a:
     - orth:PanGenome
   - orth:hasPangenomeMember:
-    - pangenome: organism:syn
+    - genome: organism:syn
