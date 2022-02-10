@@ -172,3 +172,7 @@
     - unlocalized_total_length: 0
   - mbgd:unlocalizedUngappedLength:
     - unlocalized_ungapped_length: 0
+
+- PanGenome resource:tax1076:
+  - a:
+    - orth:PanGenome

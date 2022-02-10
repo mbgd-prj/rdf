@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns='http://www.w3.org/2000/svg' style='background-color: rgb(255, 255, 255);' width='750px' height='6360px' viewBox='-0.5 -0.5 750 6360'>
+<svg xmlns='http://www.w3.org/2000/svg' style='background-color: rgb(255, 255, 255);' width='750px' height='6430px' viewBox='-0.5 -0.5 750 6430'>
   <style type='text/css'>
      .st0 {fill:#FFCE9F;} .st1 {fill:none;stroke:#000000;stroke-width:2;} .st2
     {opacity:0.6;} .st3 {font-family:&apos;Helvetica&apos;;} .st4
@@ -2395,76 +2395,127 @@
     </g>
   </g>
   <g>
-    <text x='60' y='5984' font-size='14px' class='st6'>
+    <g>
+      <path d='M230,6002 c0,4.4 -3.6,8 -8,8 h-164 c-4.4,0 -8,-3.6 -8,-8 v-34 c0,-4.4 3.6,-8 8,-8 h164 c4.4,0 8,3.6 8,8 v34 z' class='st0'/>
+      <path d='M230,6002 c0,4.4 -3.6,8 -8,8 h-164 c-4.4,0 -8,-3.6 -8,-8 v-34 c0,-4.4 3.6,-8 8,-8 h164 c4.4,0 8,3.6 8,8 v34 z' class='st1'/>
+    </g>
+    <g class='st2'>
+      <path d='M50,5980 v-12 c0,-4.4 3.6,-8 8,-8 h164 c4.4,0 8,3.6 8,8 v12'/>
+    </g>
+    <g transform='translate(-0.5 -0.5)'>
+      <text x='58' y='5998' class='st3 st4'>
+        resource:tax1076
+      </text>
+    </g>
+    <g transform='translate(-0.5 -0.5)'>
+      <text x='58' y='5970' class='st5 st6 st7' dominant-baseline='middle'>
+        PanGenome
+      </text>
+    </g>
+    <g transform='translate(-0.5 -0.5)'>
+      <text x='222' y='5970' class='st8 st6 st7' text-anchor='end' dominant-baseline='middle'>
+        URI
+      </text>
+    </g>
+  </g>
+  <polyline class='st11' points='230,5985 250,5985 250,5985 465,5985'/>
+  <polygon points='460.3,5990.7 459.4,5989.7 464.4,5985.0 459.4,5980.3 460.3,5979.3 466.5,5985.0'/>
+  <text class='st6 st4' transform='matrix(1 0 0 1 260 5980)'>
+    rdf:type
+  </text>
+  <g>
+    <rect x='470' y='5960' width='180' height='50' rx='7.5' ry='7.5' fill='#fff4c3' stroke='#000000' stroke-width='2' pointer-events='all'/>
+    <g transform='translate(-0.5 -0.5)'>
+      <switch>
+        <foreignObject style='overflow: visible; text-align: left' pointer-events='none' width='100%' height='100%' requiredFeatures='http://www.w3.org/TR/SVG11/feature#Extensibility'>
+          <div xmlns='http://www.w3.org/1999/xhtml' style='display: flex; align-items: unsafe center; justify-content: unsafe center; width: 178px; height: 1px; padding-top: 5985px; margin-left: 471px'>
+            <div style='box-sizing: border-box; font-size: 0; text-align: center;'>
+              <div style='display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal'>
+                <div>
+                  orth:PanGenome
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x='560' y='5979' fill='#000000' font-family='Helvetica' font-size='12px' text-anchor='middle'>
+          orth:PanGenome
+        </text>
+      </switch>
+    </g>
+  </g>
+  <g>
+    <text x='60' y='6054' font-size='14px' class='st6'>
       Namespaces
     </text>
-    <text x='60' y='6000' font-size='12px' class='st3'>
+    <text x='60' y='6070' font-size='12px' class='st3'>
       mbgd: &lt;http://purl.jp/bio/11/mbgd#&gt;
     </text>
-    <text x='60' y='6016' font-size='12px' class='st3'>
+    <text x='60' y='6086' font-size='12px' class='st3'>
       orth: &lt;http://purl.org/net/orth#&gt;
     </text>
-    <text x='60' y='6032' font-size='12px' class='st3'>
+    <text x='60' y='6102' font-size='12px' class='st3'>
       obo: &lt;http://purl.obolibrary.org/obo/&gt;
     </text>
-    <text x='60' y='6048' font-size='12px' class='st3'>
+    <text x='60' y='6118' font-size='12px' class='st3'>
       dct: &lt;http://purl.org/dc/terms/&gt;
     </text>
-    <text x='60' y='6064' font-size='12px' class='st3'>
+    <text x='60' y='6134' font-size='12px' class='st3'>
       void: &lt;http://rdfs.org/ns/void#&gt;
     </text>
-    <text x='60' y='6080' font-size='12px' class='st3'>
+    <text x='60' y='6150' font-size='12px' class='st3'>
       rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
     </text>
-    <text x='60' y='6096' font-size='12px' class='st3'>
+    <text x='60' y='6166' font-size='12px' class='st3'>
       rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
     </text>
-    <text x='60' y='6112' font-size='12px' class='st3'>
+    <text x='60' y='6182' font-size='12px' class='st3'>
       foaf: &lt;http://xmlns.com/foaf/0.1/&gt;
     </text>
-    <text x='60' y='6128' font-size='12px' class='st3'>
+    <text x='60' y='6198' font-size='12px' class='st3'>
       pav: &lt;http://purl.org/pav/&gt;
     </text>
-    <text x='60' y='6144' font-size='12px' class='st3'>
+    <text x='60' y='6214' font-size='12px' class='st3'>
       sio: &lt;http://semanticscience.org/resource/&gt;
     </text>
-    <text x='60' y='6160' font-size='12px' class='st3'>
+    <text x='60' y='6230' font-size='12px' class='st3'>
       ncbi: &lt;http://www.ncbi.nlm.nih.gov/&gt;
     </text>
-    <text x='60' y='6176' font-size='12px' class='st3'>
+    <text x='60' y='6246' font-size='12px' class='st3'>
       ncbiprotein: &lt;http://www.ncbi.nlm.nih.gov/protein/&gt;
     </text>
-    <text x='60' y='6192' font-size='12px' class='st3'>
+    <text x='60' y='6262' font-size='12px' class='st3'>
       taxid: &lt;http://identifiers.org/taxonomy/&gt;
     </text>
-    <text x='60' y='6208' font-size='12px' class='st3'>
+    <text x='60' y='6278' font-size='12px' class='st3'>
       up: &lt;http://purl.uniprot.org/core/&gt;
     </text>
-    <text x='60' y='6224' font-size='12px' class='st3'>
+    <text x='60' y='6294' font-size='12px' class='st3'>
       uniprot: &lt;http://purl.uniprot.org/uniprot/&gt;
     </text>
-    <text x='60' y='6240' font-size='12px' class='st3'>
+    <text x='60' y='6310' font-size='12px' class='st3'>
       uptax: &lt;http://purl.uniprot.org/taxonomy/&gt;
     </text>
-    <text x='60' y='6256' font-size='12px' class='st3'>
+    <text x='60' y='6326' font-size='12px' class='st3'>
       resource: &lt;http://mbgd.genome.ad.jp/rdf/resource/&gt;
     </text>
-    <text x='60' y='6272' font-size='12px' class='st3'>
+    <text x='60' y='6342' font-size='12px' class='st3'>
       organism: &lt;http://mbgd.genome.ad.jp/rdf/resource/organism/&gt;
     </text>
-    <text x='60' y='6288' font-size='12px' class='st3'>
+    <text x='60' y='6358' font-size='12px' class='st3'>
       nucseq: &lt;http://mbgd.genome.ad.jp/rdf/resource/nucseq/&gt;
     </text>
-    <text x='60' y='6304' font-size='12px' class='st3'>
+    <text x='60' y='6374' font-size='12px' class='st3'>
       cluster: &lt;http://mbgd.genome.ad.jp/rdf/resource/cluster/&gt;
     </text>
-    <text x='60' y='6320' font-size='12px' class='st3'>
+    <text x='60' y='6390' font-size='12px' class='st3'>
       domain:
       &lt;http://mbgd.genome.ad.jp/rdf/resource/domain/2018-01_default/tax1129:1182/&gt;
     </text>
-    <text x='60' y='6336' font-size='12px' class='st3'>
+    <text x='60' y='6406' font-size='12px' class='st3'>
       faldo: &lt;http://biohackathon.org/resource/faldo#&gt;
     </text>
-    <rect x='50' y='5960' width='524' height='390' fill='none' stroke='#000000' stroke-width='1'/>
+    <rect x='50' y='6030' width='524' height='390' fill='none' stroke='#000000' stroke-width='1'/>
   </g>
 </svg>
