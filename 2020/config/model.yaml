@@ -176,3 +176,5 @@
 - PanGenome resource:tax1076:
   - a:
     - orth:PanGenome
+  - orth:hasPangenomeMember:
+    - pangenome: organism:syn
