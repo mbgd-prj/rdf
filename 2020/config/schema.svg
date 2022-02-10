@@ -21,7 +21,7 @@
     </g>
     <g transform='translate(-0.5 -0.5)'>
       <text x='58' y='48' class='st3 st4'>
-        cluster:2018-01_default_3927
+        cluster:2020-01_default_3927
       </text>
     </g>
     <g transform='translate(-0.5 -0.5)'>
@@ -339,7 +339,7 @@
   <polyline class='st12' points='230,35 250,35 250,875 465,875'/>
   <polygon points='460.3,880.7 459.4,879.7 464.4,875.0 459.4,870.3 460.3,869.3 466.5,875.0'/>
   <text class='st6 st4' transform='matrix(1 0 0 1 260 870)'>
-    orth:hasHomologous +
+    orth:hasHomologousCluster +
   </text>
   <g>
     <g>
