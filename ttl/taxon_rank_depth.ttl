@@ -1,0 +1,11 @@
+@prefix taxont: <http://ddbj.nig.ac.jp/ontologies/taxonomy/> .
+@prefix mbgd: <http://purl.jp/bio/11/mbgd#> .
+
+taxont:Superkingdom mbgd:taxRankDepth 1 .
+taxont:Kingdom mbgd:taxRankDepth 2 .
+taxont:Phylum mbgd:taxRankDepth 3 .
+taxont:Class mbgd:taxRankDepth 4 .
+taxont:Order mbgd:taxRankDepth 5 .
+taxont:Family mbgd:taxRankDepth 6 .
+taxont:Genus mbgd:taxRankDepth 7 .
+taxont:Species mbgd:taxRankDepth 8 .
