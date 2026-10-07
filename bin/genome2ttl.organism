@@ -110,7 +110,7 @@ while (<>) {
     print "    mbgd:taxon <http://identifiers.org/taxonomy/$val{taxid}> ;\n";
     print "    obo:RO_0002162 <http://identifiers.org/taxonomy/$val{taxid}> ;\n";
     print "    up:organism <http://purl.uniprot.org/taxonomy/$val{taxid}> ;\n";
-    print "    foaf:page <https://mbgd.nibb.ac.jp/htbin/MBGD_whole_html.pl?spec=$val{sp}> .\n";
+    print "    foaf:page <http://mbgd.genome.ad.jp/htbin/MBGD_whole_html.pl?spec=$val{sp}> .\n";
     print "\n";
 }
 
