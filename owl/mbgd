@@ -226,6 +226,44 @@
     rdfs:subPropertyOf sio:SIO_000041 ;
     rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
 
+:begin 
+    a owl:DatatypeProperty ;
+    rdfs:label "begin" ;
+    rdfs:comment "Start position of the gene on the nucleotide sequence (mbgd:nucSeq)." ;
+    rdfs:domain orth:Gene ;
+    rdfs:range xsd:integer ;
+    rdfs:subPropertyOf :geneValue ;
+    rdfs:subPropertyOf sio:SIO_000791 ;
+    rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
+
+:end 
+    a owl:DatatypeProperty ;
+    rdfs:label "end" ;
+    rdfs:comment "End position of the gene on the nucleotide sequence (mbgd:nucSeq)." ;
+    rdfs:domain orth:Gene ;
+    rdfs:range xsd:integer ;
+    rdfs:subPropertyOf :geneValue ;
+    rdfs:subPropertyOf sio:SIO_000792 ;
+    rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
+
+:strand 
+    a owl:DatatypeProperty ;
+    rdfs:label "strand" ;
+    rdfs:comment "Strand of the gene on the nucleotide sequence: \"1\" (forward) or \"-1\" (reverse)." ;
+    rdfs:domain orth:Gene ;
+    rdfs:range xsd:string ;
+    rdfs:subPropertyOf :geneValue ;
+    rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
+
+:geneOrder 
+    a owl:DatatypeProperty ;
+    rdfs:label "geneOrder" ;
+    rdfs:comment "Serial number of the gene within the organism, ordered by nucleotide sequence and start position." ;
+    rdfs:domain orth:Gene ;
+    rdfs:range xsd:integer ;
+    rdfs:subPropertyOf :geneValue ;
+    rdfs:isDefinedBy <http://purl.jp/bio/11/mbgd> .
+
 :domainValue 
     a owl:DatatypeProperty ;
     rdfs:label "domainValue" ;
